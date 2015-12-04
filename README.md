@@ -34,6 +34,7 @@ Screen is divided in halfs/thirds/quarters, as shown in the figure down below.
 * 7: Top left quarter of the screen
 * 8: Top half of the screen (spans the screen horizontally)
 * 9: Top right quarter of the screen
+
 >           +------+ +------+ +------+
 >           |777   | |888888| |   999|
 >           |777   | |888888| |   999|
@@ -63,6 +64,7 @@ Screen is divided in nine regions, as shown in the figure down below.
 * 7: Top left 1/9 of the screen
 * 8: Top center 1/9 of the screen
 * 9: Top right 1/9 of the screen
+
 >           +---+ +---+ +---+
 >           |7  | | 8 | |  9|
 >           |   | |   | |   |
