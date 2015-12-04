@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; WinSnap_Extras.ahk
 ;; WinSnap Extras for Windows/Autohotkey
-;; Copyright (C) 2015	Ruilin Xu / https://github.com/henryxrl
+;; Copyright (C) 2015   Ruilin Xu / https://github.com/henryxrl
 ;;
 ;; WinSnap Extras is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -69,3 +69,254 @@
 ;; +---+ +---+ +---+
 ;; 0: Restore/Minimize
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+; Skips the gentle method of activating a window and goes straight to the forceful method.
+#WinActivateForce
+
+; Don't display a tray icon
+; #NoTrayIcon
+
+; Permanently running
+; #Persistent
+
+;; Variable Initialization
+; Window variables
+SysGet, Scr, MonitorWorkArea
+PADDING := 0
+TOP := ScrTop
+BOTTOM := ScrBottom + PADDING
+LEFT := ScrLeft - PADDING
+RIGHT := ScrRight + PADDING
+;MsgBox % "TOP: " TOP "`nBOTTOM: " BOTTOM "`nLEFT: " LEFT "`nRIGHT: " RIGHT
+
+; Dictionary which saves windows' data: 1. original x; 2. original y; 3. original w; 4. original h; 5. docked; 6. docked x; 7. docked y
+DICT := {}
+
+CAN_ADD_NEW := true
+PREV_ID := -1
+DOCKED := false
+BUSY := false
+
+; Timer for constantly checking window status
+SetTimer, CheckMove, 200
+return
+
+;; Check if active window has been moved
+CheckMove:
+    if (!BUSY) {
+        WinGet, active_id, ID, A
+        if !(!DICT[active_id]) {
+            ;MsgBox % "DICT[active_id][5]: " DICT[active_id][5]
+            if (DICT[active_id][5]) {
+                KeyWait, LButton
+                KeyWait, Numpad0
+                KeyWait, Numpad1
+                KeyWait, Numpad2
+                KeyWait, Numpad3
+                KeyWait, Numpad4
+                KeyWait, Numpad5
+                KeyWait, Numpad6
+                KeyWait, Numpad7
+                KeyWait, Numpad8
+                KeyWait, Numpad9
+                KeyWait, LWin
+                KeyWait, RWin
+
+                a := DICT[active_id][6]
+                b := DICT[active_id][7]
+                if (a <> "" and b <> "") {
+                    WinGetPos, x, y, , , A
+                    if (a <> x or b <> y) {
+                        SetTimer, CheckMove, Off
+                        ;MsgBox % "a: " a "`nb: " b "`nx: " x "`ny: " y
+                        DOCKED := false
+                        DICT[active_id][5] := DOCKED
+                        WinMove, A,, , , DICT[active_id][3], DICT[active_id][4]
+                        DICT.Delete(active_id)
+                        CAN_ADD_NEW := true
+                        ;Gosub, MoveInit
+                        SetTimer, CheckMove, 200
+                    }
+                }
+            } else {
+                ;SetTimer, CheckMove, Off
+                ;KeyWait, LButton
+                ;CAN_ADD_NEW := true
+                ;Gosub, MoveInit
+                ;SetTimer, CheckMove, 200
+            }
+        }
+    }
+return
+
+;; Things to do before moving a window
+MoveInit:
+    WinGet, active_id, ID, A
+
+    ; Intentionally set DOCKED to false to prevent super quick key press
+    ; Will set back to true later
+    DOCKED := false
+
+    if (PREV_ID <> active_id) {
+        PREV_ID := active_id
+        if (!DICT[active_id])
+            CAN_ADD_NEW := true
+    }
+
+    if (CAN_ADD_NEW) {
+        ;MsgBox, Inside!
+        WinGet, maximized, MinMax, A
+        WinGetPos, X, Y, W, H, A
+        DICT[active_id] := Array(X, Y, W, H, DOCKED)
+        if (maximized)
+            WinRestore, A
+        CAN_ADD_NEW := false
+    }
+return
+
+;; Restore window to undocked condition
+Recover:
+   DOCKED := false
+   DICT[active_id][5] := DOCKED
+   WinGet, active_id, ID, A
+   ;MsgBox, % "DICT[active_id]: " DICT[active_id][1] " " DICT[active_id][2] " " DICT[active_id][3] " " DICT[active_id][4]
+   WinMove, A,, DICT[active_id][1], DICT[active_id][2], DICT[active_id][3], DICT[active_id][4]
+   DICT.Delete(active_id)
+return
+
+; Restore or minimize a window
+;RestoreOrMinimize:
+;   DOCKED := false
+;   DICT[active_id][5] := DOCKED
+;   WinGet, maximized, MinMax, A
+;   if (maximized)
+;       WinRestore, A
+;   else
+;       WinMinimize, A
+;return
+
+;; Arrow keys
+;#down::
+;   Gosub, RestoreOrMinimize
+;   return
+;#up::
+;   WinMaximize, A
+;return
+;#left::
+;   Gosub, MoveInit
+;   WinMove,A,,LEFT,TOP,RIGHT/2.0,BOTTOM
+;return
+;#right::
+;   Gosub, MoveInit
+;   WinMove,A,,RIGHT/2.0,TOP,RIGHT/2.0,BOTTOM
+;return
+
+;; Resize window (MAIN WORK)
+resizeWindow(x0,y0,w0,h0) {
+    global BUSY
+    global DOCKED
+    global DICT
+    global PREV_ID
+    global CAN_ADD_NEW
+
+    if (!BUSY) {
+        BUSY := true
+        Gosub, MoveInit
+
+        x := Round(x0)
+        y := Round(y0)
+        w := Round(w0)
+        h := Round(h0)
+        WinMove,A,,x,y,w,h
+
+        WinGet, active_id, ID, A
+        DICT[active_id][6] := x
+        DICT[active_id][7] := y
+        ;MsgBox % "a: " DICT[active_id][6] "`nb: " DICT[active_id][7]
+        DOCKED := true
+        DICT[active_id][5] := DOCKED
+        BUSY := false
+    }
+}
+
+;; Restore window to undocked condition
+restoreWindow() {
+    global BUSY
+    global DOCKED
+    global DICT
+    global CAN_ADD_NEW
+
+    if (!BUSY) {
+        BUSY := true
+        Gosub, Recover
+        CAN_ADD_NEW := true
+        BUSY := false
+    }
+}
+
+;; Key combinations
+; Win + numpad numbers
+#Numpad0::
+    ;Gosub, RestoreOrMinimize
+    restoreWindow()
+return
+#Numpad1::
+    resizeWindow(LEFT,BOTTOM/2.0,RIGHT/2.0,BOTTOM/2.0)
+return
+#Numpad2::
+    resizeWindow(LEFT,BOTTOM/2.0,RIGHT,BOTTOM/2.0)
+return
+#Numpad3::
+    resizeWindow(RIGHT/2.0,BOTTOM/2.0,RIGHT/2.0,BOTTOM/2.0)
+return
+#Numpad4::
+    resizeWindow(LEFT,TOP,RIGHT/3.0+PADDING*2,BOTTOM)
+return
+#Numpad5::
+    resizeWindow(RIGHT/3.0-PADDING,TOP,RIGHT/3.0+PADDING*2,BOTTOM)
+return
+#Numpad6::
+    resizeWindow(RIGHT/3.0*2.0-PADDING,TOP,RIGHT/3.0+PADDING*2,BOTTOM)
+return
+#Numpad7::
+    resizeWindow(LEFT,TOP,RIGHT/2.0,BOTTOM/2.0)
+return
+#Numpad8::
+    resizeWindow(LEFT,TOP,RIGHT,BOTTOM/2.0)
+return
+#Numpad9::
+    resizeWindow(RIGHT/2.0,TOP,RIGHT/2.0,BOTTOM/2.0)
+return
+
+; Ctrl + Win + numpad numbers
+#^Numpad0::
+    restoreWindow()
+return
+#^Numpad1::
+    resizeWindow(LEFT,BOTTOM/3.0*2,RIGHT/3.0,BOTTOM/3.0)
+return
+#^Numpad2::
+    resizeWindow(RIGHT/3.0,BOTTOM/3.0*2,RIGHT/3.0,BOTTOM/3.0)
+return
+#^Numpad3::
+    resizeWindow(RIGHT/3.0*2,BOTTOM/3.0*2,RIGHT/3.0,BOTTOM/3.0)
+return
+#^Numpad4::
+    resizeWindow(LEFT,BOTTOM/3.0,RIGHT/3.0,BOTTOM/3.0)
+return
+#^Numpad5::
+    resizeWindow(RIGHT/3.0,BOTTOM/3.0,RIGHT/3.0,BOTTOM/3.0)
+return
+#^Numpad6::
+    resizeWindow(RIGHT/3.0*2,BOTTOM/3.0,RIGHT/3.0,BOTTOM/3.0)
+return
+#^Numpad7::
+    resizeWindow(LEFT,TOP,RIGHT/3.0,BOTTOM/3.0)
+return
+#^Numpad8::
+    resizeWindow(RIGHT/3.0,TOP,RIGHT/3.0,BOTTOM/3.0)
+return
+#^Numpad9::
+    resizeWindow(RIGHT/3.0*2,TOP,RIGHT/3.0,BOTTOM/3.0)
+return
