@@ -139,78 +139,10 @@ CheckMove:
                         SetTimer, CheckMove, 200
                     }
                 }
-            } else {
-                ;SetTimer, CheckMove, Off
-                ;KeyWait, LButton
-                ;CAN_ADD_NEW := true
-                ;Gosub, MoveInit
-                ;SetTimer, CheckMove, 200
             }
         }
     }
 return
-
-;; Things to do before moving a window
-MoveInit:
-    WinGet, active_id, ID, A
-
-    ; Intentionally set DOCKED to false to prevent super quick key press
-    ; Will set back to true later
-    DOCKED := false
-
-    if (PREV_ID <> active_id) {
-        PREV_ID := active_id
-        if (!DICT[active_id])
-            CAN_ADD_NEW := true
-    }
-
-    if (CAN_ADD_NEW) {
-        ;MsgBox, Inside!
-        WinGet, maximized, MinMax, A
-        WinGetPos, X, Y, W, H, A
-        DICT[active_id] := Array(X, Y, W, H, DOCKED)
-        if (maximized)
-            WinRestore, A
-        CAN_ADD_NEW := false
-    }
-return
-
-;; Restore window to undocked condition
-Recover:
-   DOCKED := false
-   DICT[active_id][5] := DOCKED
-   WinGet, active_id, ID, A
-   ;MsgBox, % "DICT[active_id]: " DICT[active_id][1] " " DICT[active_id][2] " " DICT[active_id][3] " " DICT[active_id][4]
-   WinMove, A,, DICT[active_id][1], DICT[active_id][2], DICT[active_id][3], DICT[active_id][4]
-   DICT.Delete(active_id)
-return
-
-; Restore or minimize a window
-;RestoreOrMinimize:
-;   DOCKED := false
-;   DICT[active_id][5] := DOCKED
-;   WinGet, maximized, MinMax, A
-;   if (maximized)
-;       WinRestore, A
-;   else
-;       WinMinimize, A
-;return
-
-;; Arrow keys
-;#down::
-;   Gosub, RestoreOrMinimize
-;   return
-;#up::
-;   WinMaximize, A
-;return
-;#left::
-;   Gosub, MoveInit
-;   WinMove,A,,LEFT,TOP,RIGHT/2.0,BOTTOM
-;return
-;#right::
-;   Gosub, MoveInit
-;   WinMove,A,,RIGHT/2.0,TOP,RIGHT/2.0,BOTTOM
-;return
 
 ;; Resize window (MAIN WORK)
 resizeWindow(x0,y0,w0,h0) {
@@ -222,8 +154,30 @@ resizeWindow(x0,y0,w0,h0) {
 
     if (!BUSY) {
         BUSY := true
-        Gosub, MoveInit
+        WinGet, active_id, ID, A
 
+        ; Preparation for window resize
+        ; Intentionally set DOCKED to false to prevent super quick key press
+        ; Will set back to true later
+        DOCKED := false
+
+        if (PREV_ID <> active_id) {
+           PREV_ID := active_id
+           if (!DICT[active_id])
+               CAN_ADD_NEW := true
+        }
+
+        if (CAN_ADD_NEW) {
+           ;MsgBox, Inside!
+           WinGet, maximized, MinMax, A
+           WinGetPos, X, Y, W, H, A
+           DICT[active_id] := Array(X, Y, W, H, DOCKED)
+           if (maximized)
+               WinRestore, A
+           CAN_ADD_NEW := false
+        }
+
+        ; Resize window
         x := Round(x0)
         y := Round(y0)
         w := Round(w0)
@@ -249,7 +203,14 @@ restoreWindow() {
 
     if (!BUSY) {
         BUSY := true
-        Gosub, Recover
+
+        DOCKED := false
+        DICT[active_id][5] := DOCKED
+        WinGet, active_id, ID, A
+        ;MsgBox, % "DICT[active_id]: " DICT[active_id][1] " " DICT[active_id][2] " " DICT[active_id][3] " " DICT[active_id][4]
+        WinMove, A,, DICT[active_id][1], DICT[active_id][2], DICT[active_id][3], DICT[active_id][4]
+        DICT.Delete(active_id)
+
         CAN_ADD_NEW := true
         BUSY := false
     }
@@ -258,7 +219,6 @@ restoreWindow() {
 ;; Key combinations
 ; Win + numpad numbers
 #Numpad0::
-    ;Gosub, RestoreOrMinimize
     restoreWindow()
 return
 #Numpad1::
