@@ -1,6 +1,6 @@
 # WinSnap Extras
 
-WinSnap Extras is a simple script written in AutoHotKey. It further extends the Windows' window snapping feature by splitting screen into halfs/thirds/quarters; it's even able to divide the screen into nine windows, all by simple keyboard shortcuts.
+WinSnap Extras is a simple script written in AutoHotKey. It further extends the Windows' window snapping feature by splitting screen into halfs/thirds/quarters; it's even able to divide the screen into nine windows, all by simple keyboard shortcuts. **Snapped windows will return to their previous locations and sizes after being removed from snapping.**
 
 ## Installation
 
